@@ -171,13 +171,13 @@ function listaClientes(){var g={};S.cobros.forEach(function(c){var k=c.cliente.t
 function driveCfg(){var c={};try{c=JSON.parse(localStorage.getItem('cellfix_drive')||'{}');}catch(e){}return c.url?c:(S.drive||{});}
 function toastL(m){var t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(window._tt);}
 function subirDrive(d,c,i,cb){var cfg=driveCfg(),nom=(c.disp||'equipo').replace(/[^\w-]+/g,'_');var body=JSON.stringify({key:cfg.key,base64:d.split(',')[1],mime:'image/jpeg',filename:nom+'_'+c.id+'_'+(i+1)+'.jpg',equipo:c.cliente+' - '+(c.disp||'equipo')});
- try{fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){return r.json();}).then(function(j){cb(j&&j.ok?j:null);}).catch(function(){cb(null);});}catch(e){cb(null);}}
+ try{fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){return r.json();}).then(function(j){window._driveErr=(j&&j.error)||(j&&j.ok?'':'respuesta inesperada');cb(j&&j.ok?j:null);}).catch(function(x){window._driveErr='no se pudo conectar ('+((x&&x.message)||'bloqueado')+')';cb(null);});}catch(e){window._driveErr=String(e);cb(null);}}
 function subirFotos(c,fs){var cfg=driveCfg(),urls=[],i=0;
  function local(rest){fotoPut(c.id,rest,function(ok){c.urls=urls;c.nfotos=urls.length+(ok?rest.length:0);save();toast(ok?'Las fotos quedaron guardadas en este dispositivo.':'No se pudieron guardar las fotos');render();});}
  if(!cfg.url){local(fs);return;}
  (function next(){if(i>=fs.length){c.urls=urls;c.nfotos=urls.length;save();toast('Fotos guardadas en Drive');render();return;}
   toastL('Subiendo foto '+(i+1)+' de '+fs.length+'...');
-  subirDrive(fs[i],c,i,function(r){if(r){urls.push(r.url);i++;next();}else{toast('No se pudo subir a Drive');setTimeout(function(){local(fs.slice(i));},1200);}});})();}
+  subirDrive(fs[i],c,i,function(r){if(r){urls.push(r.url);i++;next();}else{toast('No se pudo subir a Drive: '+(window._driveErr||'error desconocido'));setTimeout(function(){local(fs.slice(i));},4500);}});})();}
 function goDrv(){go('drv');}
 function vDrive(){var c=driveCfg();return '<h1>Fotos en Drive</h1><p class="sub">Conecta tu Google Drive para guardar las fotos de los equipos.</p><div class="card"><label>URL de la aplicación web (Apps Script)</label><input id="dv_u" value="'+esc(c.url||'')+'" placeholder="https://script.google.com/macros/s/.../exec"><label>Clave secreta</label><input id="dv_k" value="'+esc(c.key||'')+'" placeholder="La misma que pusiste en el script"><button class="btn" onclick="saveDrive()">Guardar</button></div><div class="card"><p class="sub">Para que la subida funcione, esta herramienta debe abrirse desde tu propio alojamiento (por ejemplo GitHub Pages o Netlify). Dentro de la vista de Claude el navegador bloquea las conexiones a Google y las fotos se guardan solo en este dispositivo.</p></div>';}
 function saveDrive(){var c={url:document.getElementById('dv_u').value.trim(),key:document.getElementById('dv_k').value.trim()};S.drive=c;try{localStorage.setItem('cellfix_drive',JSON.stringify(c));}catch(e){}save();toast('Guardado');}
