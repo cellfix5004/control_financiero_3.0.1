@@ -75,10 +75,14 @@ nav button{flex:1 0 auto;font-size:10px;padding:6px 7px}
 <div id="menu"></div>
 <div id="toast"></div>
 <script>
+/* PEGA AQUI la configuracion de tu app web de Firebase (Configuracion del proyecto > Tus apps > Configuracion del SDK) */
+window.FIREBASE_CONFIG={apiKey:"AIzaSyBMJVj0ohfkjJYPN5W2Zo7GyVc-ZuzR0Cc",authDomain:"nuevo-3-e8988.firebaseapp.com",projectId:"nuevo-3-e8988",storageBucket:"nuevo-3-e8988.firebasestorage.app",messagingSenderId:"987920010804",appId:"1:987920010804:web:1b9b07037ca5b181ddc461"};
+</script>
+<script>
 var KEY='cellfix_finanzas_v1';
 var S={tx:[],meta:0,fondo:0,fijos:[],cobros:[],precios:[],prestamos:[]};
 try{var raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw));}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}if(window.cloudPush)window.cloudPush();}
 function hoy(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function L(n){return 'L '+(Number(n)||0).toLocaleString('es-HN',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -164,7 +168,7 @@ function listaClientes(){var g={};S.cobros.forEach(function(c){var k=c.cliente.t
  var arr=Object.keys(g).map(function(k){var o=g[k];o.tot=0;o.pag=0;o.l.forEach(function(c){o.tot+=c.total;o.pag+=Math.min(c.total,cobrado(c));});o.deb=Math.max(0,Math.round((o.tot-o.pag)*100)/100);o.last=o.l.reduce(function(m,c){return c.fecha>m?c.fecha:m;},'');o.tel=o.l.reduce(function(m,c){return c.tel||m;},'');return o;}).filter(function(o){return o.n.toLowerCase().indexOf(qc.trim().toLowerCase())>-1;});
  arr.sort(function(a,b){return b.deb-a.deb||b.last.localeCompare(a.last);});
  return arr.length?arr.map(function(o){return '<details class="card"><summary><div class="row" style="border:0;padding:0"><div><b>'+esc(o.n)+'</b><small>'+o.l.length+' trabajo'+(o.l.length===1?'':'s')+' · último '+o.last+(o.tel?' · '+esc(o.tel):'')+'</small></div><b class="'+(o.deb?'bad':'ok')+'">'+(o.deb?'Debe '+L(o.deb):'Al día')+'</b></div><div class="grid" style="margin-top:10px"><div><div class="k">Total de trabajos</div><b>'+L(o.tot)+'</b></div><div><div class="k">Ya pagó</div><b class="ok">'+L(o.pag)+'</b></div></div></summary>'+o.l.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha);}).map(function(c){var cb=Math.min(c.total,cobrado(c)),d=Math.max(0,c.total-cb);return '<div class="row"><div><b>'+esc(c.concepto)+(c.disp?' · '+esc(c.disp):'')+'</b><small>'+c.fecha+' · total '+L(c.total)+' · pagado '+L(cb)+'</small></div><b class="'+(d>0.005?'bad':'ok')+'">'+(d>0.005?'Debe '+L(d):'Pagado')+'</b></div>';}).join('')+'</details>';}).join(''):'<div class="card"><p class="sub">'+(S.cobros.length?'No se encontró ese cliente.':'Todavía no hay clientes. Aparecen cuando creas un cobro en Por cobrar.')+'</p></div>';}
-function driveCfg(){try{return JSON.parse(localStorage.getItem('cellfix_drive')||'{}');}catch(e){return {};}}
+function driveCfg(){var c={};try{c=JSON.parse(localStorage.getItem('cellfix_drive')||'{}');}catch(e){}return c.url?c:(S.drive||{});}
 function toastL(m){var t=document.getElementById('toast');t.textContent=m;t.style.opacity=1;clearTimeout(window._tt);}
 function subirDrive(d,c,i,cb){var cfg=driveCfg(),nom=(c.disp||'equipo').replace(/[^\w-]+/g,'_');var body=JSON.stringify({key:cfg.key,base64:d.split(',')[1],mime:'image/jpeg',filename:nom+'_'+c.id+'_'+(i+1)+'.jpg',equipo:c.cliente+' - '+(c.disp||'equipo')});
  try{fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body}).then(function(r){return r.json();}).then(function(j){cb(j&&j.ok?j:null);}).catch(function(){cb(null);});}catch(e){cb(null);}}
@@ -176,7 +180,7 @@ function subirFotos(c,fs){var cfg=driveCfg(),urls=[],i=0;
   subirDrive(fs[i],c,i,function(r){if(r){urls.push(r.url);i++;next();}else{toast('No se pudo subir a Drive');setTimeout(function(){local(fs.slice(i));},1200);}});})();}
 function goDrv(){go('drv');}
 function vDrive(){var c=driveCfg();return '<h1>Fotos en Drive</h1><p class="sub">Conecta tu Google Drive para guardar las fotos de los equipos.</p><div class="card"><label>URL de la aplicación web (Apps Script)</label><input id="dv_u" value="'+esc(c.url||'')+'" placeholder="https://script.google.com/macros/s/.../exec"><label>Clave secreta</label><input id="dv_k" value="'+esc(c.key||'')+'" placeholder="La misma que pusiste en el script"><button class="btn" onclick="saveDrive()">Guardar</button></div><div class="card"><p class="sub">Para que la subida funcione, esta herramienta debe abrirse desde tu propio alojamiento (por ejemplo GitHub Pages o Netlify). Dentro de la vista de Claude el navegador bloquea las conexiones a Google y las fotos se guardan solo en este dispositivo.</p></div>';}
-function saveDrive(){try{localStorage.setItem('cellfix_drive',JSON.stringify({url:document.getElementById('dv_u').value.trim(),key:document.getElementById('dv_k').value.trim()}));toast('Guardado');}catch(e){toast('No se pudo guardar');}}
+function saveDrive(){var c={url:document.getElementById('dv_u').value.trim(),key:document.getElementById('dv_k').value.trim()};S.drive=c;try{localStorage.setItem('cellfix_drive',JSON.stringify(c));}catch(e){}save();toast('Guardado');}
 function comprimir(file,cb){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var s=Math.min(1,1280/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=Math.round(im.width*s);cv.height=Math.round(im.height*s);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);cb(cv.toDataURL('image/jpeg',.75));};im.onerror=function(){toast('No se pudo leer una foto');};im.src=r.result;};r.readAsDataURL(file);}
 var fotosNuevas=[];
 function prevHtml(){return fotosNuevas.map(function(d,i){return '<div style="position:relative"><img src="'+d+'" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px"><button class="x" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border-radius:50%;width:24px;height:24px;font-size:16px;line-height:1" onclick="quitarFoto('+i+')">×</button></div>';}).join('');}
@@ -224,7 +228,7 @@ function savePre(id){var n=document.getElementById('en').value.trim(),f=+documen
 function delPre(id){if(sure('p'+id)){S.precios=S.precios.filter(function(p){return p.id!==id;});save();render();}}
 function goHist(){go('hist');}
 function goHF(){go('histfijos');}
-function renderMenu(){document.getElementById('menu').innerHTML='<button class="hb" onclick="tgl()" aria-label="Menú">'+(menu?'✕':'☰')+'</button>'+(menu?'<div class="ov" onclick="tgl()"></div><div class="mn"><button onclick="goCli()">👥 Clientes</button><button onclick="goHist()">📈 Historial semanal</button><button onclick="goHF()">📅 Historial de gastos fijos</button><button onclick="goPre()">🏷️ Lista de precios</button><button onclick="goPres()">💰 Préstamos</button><button onclick="goDrv()">☁️ Fotos en Drive</button></div>':'');}
+function renderMenu(){document.getElementById('menu').innerHTML='<button class="hb" onclick="tgl()" aria-label="Menú">'+(menu?'✕':'☰')+'</button>'+(menu?'<div class="ov" onclick="tgl()"></div><div class="mn"><button onclick="goCli()">👥 Clientes</button><button onclick="goHist()">📈 Historial semanal</button><button onclick="goHF()">📅 Historial de gastos fijos</button><button onclick="goPre()">🏷️ Lista de precios</button><button onclick="goPres()">💰 Préstamos</button><button onclick="goDrv()">☁️ Fotos en Drive</button>'+(window.cloudOn?'<button onclick="cloudLogout()">🚪 Cerrar sesión</button>':'')+'</div>':'');}
 function wk(f){var p=f.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);d.setDate(d.getDate()-((d.getDay()+6)%7));return d;}
 function rowsMov(l){return l.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha)||b.id-a.id;}).map(function(t){var g=t.tipo==='ingreso'||t.tipo==='entrada';return '<div class="row"><div><b>'+esc(t.desc||t.cat)+'</b><small>'+t.fecha+' · '+esc(t.cat)+' · '+t.metodo+'</small></div><b class="'+(g?'ok':'bad')+'">'+(g?'+':'−')+L(t.monto)+'</b></div>';}).join('');}
 function vHist(){var g={};S.tx.forEach(function(t){var k=fs(wk(t.fecha));(g[k]=g[k]||[]).push(t);});
@@ -255,6 +259,29 @@ function dif(esp){var v=document.getElementById('cont').value;var el=document.ge
  el.innerHTML=d===0?'<div class="msg ok">Cuadra perfecto ✓</div>':'<div class="msg '+(d>0?'pri':'bad')+'">'+(d>0?'Sobrante: ':'Faltante: ')+L(Math.abs(d))+'</div>';}
 function render(){nav();renderMenu();var v={resumen:vResumen,nuevo:vNuevo,cobrar:vCobrar,mov:vMov,fijos:vFijos,cli:vClientes,pre:vPrecios,verpre:vVerPre,pres:vPres,drv:vDrive,hist:vHist,histfijos:vHistFijos,corte:vCorte}[tab];document.getElementById('app').innerHTML=v();}
 render();
+</script>
+<script>
+/* Sincronizacion con Firebase (Auth + Firestore). Solo se activa si pegaste tu configuracion arriba. */
+(async function(){
+var cfg=window.FIREBASE_CONFIG;if(!cfg||!cfg.apiKey||cfg.apiKey.indexOf('PEGA')>-1)return;
+var V='https://www.gstatic.com/firebasejs/10.14.1/';
+try{
+var A=await import(V+'firebase-app.js'),B=await import(V+'firebase-auth.js'),C=await import(V+'firebase-firestore.js');
+var app=A.initializeApp(cfg),auth=B.getAuth(app),db,uid=null,unsub=null,last={},remote={},timer=null,first=true;
+try{db=C.initializeFirestore(app,{localCache:C.persistentLocalCache({tabManager:C.persistentMultipleTabManager()})});}catch(e){db=C.getFirestore(app);}
+window.cloudOn=true;
+function canon(v){if(Array.isArray(v))return '['+v.map(canon).join(',')+']';if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+':'+canon(v[k]);}).join(',')+'}';return JSON.stringify(v);}
+function partes(){var p={main:{meta:S.meta||0,fondo:S.fondo||0,fijos:S.fijos||[],cobros:S.cobros||[],precios:S.precios||[],prestamos:S.prestamos||[],drive:S.drive||null}};S.tx.forEach(function(t){var k='tx-'+String(t.fecha).slice(0,7);(p[k]=p[k]||{tx:[]}).tx.push(t);});return JSON.parse(JSON.stringify(p));}
+function doPush(){if(!uid)return;var p=partes();Object.keys(last).forEach(function(k){if(k!=='main'&&!p[k])p[k]={tx:[]};});Object.keys(p).forEach(function(k){var s=canon(p[k]);if(last[k]===s)return;var prev=last[k];last[k]=s;remote[k]=p[k];C.setDoc(C.doc(db,'negocios',uid,'datos',k),p[k]).catch(function(){last[k]=prev;toast('No se pudo sincronizar');});});}
+window.cloudPush=function(){if(!uid||first)return;clearTimeout(timer);timer=setTimeout(doPush,600);};
+function aplicar(){var m=remote.main||{},tx=[];Object.keys(remote).forEach(function(k){if(k.indexOf('tx-')===0)tx=tx.concat(remote[k].tx||[]);});S.tx=tx;['meta','fondo','fijos','cobros','precios','prestamos','drive'].forEach(function(f){if(m[f]!==undefined&&m[f]!==null)S[f]=m[f];});try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}render();}
+function listen(){if(unsub)unsub();first=true;last={};remote={};unsub=C.onSnapshot(C.collection(db,'negocios',uid,'datos'),{includeMetadataChanges:true},function(snap){var ch=false;snap.docChanges().forEach(function(c){var k=c.doc.id;if(c.type==='removed'){delete remote[k];delete last[k];ch=true;return;}var d=c.doc.data(),s=canon(d);if(last[k]===s)return;last[k]=s;remote[k]=d;ch=true;});if(first&&snap.empty){if(!snap.metadata.fromCache){first=false;doPush();}return;}if(snap.empty&&snap.metadata.fromCache)return;first=false;if(ch)aplicar();},function(){toast('Sin conexión con Firebase');});}
+function showLogin(){if(document.getElementById('lg'))return;var o=document.createElement('div');o.id='lg';o.style.cssText='position:fixed;inset:0;z-index:35;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px';o.innerHTML='<div class="card" style="width:100%;max-width:380px"><h1 style="margin-top:0">Cell Fix</h1><p class="sub">Inicia sesión para ver tu negocio</p><label>Correo</label><input id="lg_e" type="email" autocomplete="username"><label>Contraseña</label><input id="lg_p" type="password" autocomplete="current-password"><button class="btn" id="lg_b">Entrar</button></div>';document.body.appendChild(o);document.getElementById('lg_b').onclick=function(){B.signInWithEmailAndPassword(auth,document.getElementById('lg_e').value.trim(),document.getElementById('lg_p').value).catch(function(){toast('Correo o contraseña incorrectos');});};document.getElementById('lg_p').onkeydown=function(e){if(e.key==='Enter')document.getElementById('lg_b').click();};}
+function hideLogin(){var o=document.getElementById('lg');if(o)o.remove();}
+window.cloudLogout=function(){B.signOut(auth);};
+B.onAuthStateChanged(auth,function(u){if(u){uid=u.uid;hideLogin();listen();renderMenu();}else{uid=null;if(unsub){unsub();unsub=null;}showLogin();}});
+}catch(e){toast('No se pudo conectar con Firebase');}
+})();
 </script>
 </body>
 </html>
