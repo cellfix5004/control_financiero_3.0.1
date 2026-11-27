@@ -88,7 +88,7 @@ function L(n){return 'L '+(Number(n)||0).toLocaleString('es-HN',{minimumFraction
 function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 var CAT={ingreso:['Reparación','Venta de accesorio','Otro ingreso'],gasto:['Repuestos','Alquiler','Servicios (luz, internet)','Publicidad','Salarios','Otro gasto']};
 var tab='resumen',tipo='ingreso',mes=hoy().slice(0,7),msg='';
-function sumas(list){var i=0,g=0,c=0;list.forEach(function(t){if(t.tipo==='ingreso'){i+=t.monto;c+=t.costo||0;}else if(t.tipo==='gasto'||(t.tipo==='salida'&&t.prestamoId))g+=t.monto;});return{ing:i,gas:g,costo:c,gan:i-c-g};}
+function sumas(list){var i=0,g=0,c=0;list.forEach(function(t){if(t.tipo==='ingreso'||(t.tipo==='entrada'&&!t.prestamoId)){i+=t.monto;c+=t.costo||0;}else if(t.tipo==='gasto'||t.tipo==='salida')g+=t.monto;});return{ing:i,gas:g,costo:c,gan:i-c-g};}
 function nav(){var T=[['resumen','📊','Resumen'],['cobrar','🤝','Por cobrar'],['mov','🧾','Movimientos'],['fijos','📅','Fijos'],['verpre','🏷️','Precios'],['corte','💵','Corte']];
 document.getElementById('nav').innerHTML=T.map(function(t){return '<button class="'+(tab===t[0]?'on':'')+'" onclick="go(\''+t[0]+'\')"><span>'+t[1]+'</span>'+t[2]+'</button>';}).join('');}
 function go(t){tab=t;msg='';menu=false;render();window.scrollTo(0,0);}
@@ -97,8 +97,8 @@ function vResumen(){
  var pct=S.meta>0?Math.min(100,Math.round(s.ing/S.meta*100)):0;
  var dias=[],mx=1,i;
  for(i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);var f=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  var a=S.tx.filter(function(t){return t.fecha===f&&t.tipo==='ingreso';}).reduce(function(x,t){return x+t.monto;},0);dias.push([f.slice(8),a]);mx=Math.max(mx,a);}
- var porCat={};l.filter(function(t){return t.tipo==='gasto'||(t.tipo==='salida'&&t.prestamoId);}).forEach(function(t){porCat[t.cat]=(porCat[t.cat]||0)+t.monto;});
+  var a=S.tx.filter(function(t){return t.fecha===f&&(t.tipo==='ingreso'||(t.tipo==='entrada'&&!t.prestamoId));}).reduce(function(x,t){return x+t.monto;},0);dias.push([f.slice(8),a]);mx=Math.max(mx,a);}
+ var porCat={};l.filter(function(t){return t.tipo==='gasto'||t.tipo==='salida';}).forEach(function(t){porCat[t.cat]=(porCat[t.cat]||0)+t.monto;});
  var cats=Object.keys(porCat).sort(function(a,b){return porCat[b]-porCat[a];});
  return '<h1>Cell Fix</h1><p class="sub">Control financiero</p>'+
  '<label>Mes</label><input type="month" value="'+mes+'" onchange="mes=this.value||mes;render()">'+
